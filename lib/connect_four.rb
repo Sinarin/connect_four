@@ -56,6 +56,17 @@ class Gameboard
     end
   end 
 
+  def start_game
+    make_game
+    print_board
+    column = ask_column
+  end
+
+  def make_game
+    player1 = Player.new("R", self)
+    player2 = Player.new("B", self)
+  end
+
 end
 
 class Player 
