@@ -203,14 +203,6 @@ class Gameboard
     end
   end
 
-  def valid_input?(number)
-    if number =~ /\A[1-7]\Z/ && check_row()
-      true
-    else
-      puts "invalid input"
-    end
-  end
-
 end
 
 class Player 
