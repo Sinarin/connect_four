@@ -22,34 +22,43 @@ RSpec.describe Gameboard do
   end
 
   describe '#place_piece' do
+
     context 'empty board' do
       subject(:emptyboard) { described_class.new }
       subject(:player1) { Player.new('B', emptyboard.board, "Player 1") }
 
-      it 'calls check_row' do
-        expect(emptyboard).to receive(:check_row)
-        emptyboard.place_piece(player1, 0)
+      before do
+        allow(emptyboard).to receive(:print_board)
       end
 
       it 'adds piece' do
-        emptyboard.place_piece(player1, 0)
-        expect(emptyboard.board[0][0]).to eq "R"
+        emptyboard.place_piece(player1, emptyboard.check_row(0), 0)
+        expect(emptyboard.board[0][0]).to eq "B"
       end
     end
 
     context 'board with 4 rows' do
       subject(:board4)  { described_class.new(4) }
+      let(:player1) { instance_double(Player, team: "B") }
+
+      before do
+        allow(board4).to receive(:print_board)
+      end
+
       it 'adds piece to first empty column' do
-        board4.place_piece(player1, 0)
-        expect(board4.board[0][0]).to eql 'R'
+        board4.place_piece(player1, board4.check_row(0), 0)
+        expect(board4.board[0][0]).to eql 'B'
+      end
+
+      before do
+        allow(board4).to receive(:print_board).twice
       end
       
       it 'adds piece' do
-        board = Gameboard.new(4)
-        board.place_piece(player1, 0)
-        board.place_piece(player1, 0)
-        expect(board.board[0][0]).to eq "R"
-        expect(board.board[1][0]).to eq "R"
+        board4.place_piece(player1, 0, 0)
+        board4.place_piece(player1, 1, 0)
+        expect(board4.board[0][0]).to eq "B"
+        expect(board4.board[1][0]).to eq "B"
       end
     end
   end
@@ -69,14 +78,16 @@ RSpec.describe Gameboard do
 
     context 'returns first empty row when given column' do
       subject(:board3) { described_class.new(3) }
+      let(:player1) { instance_double(Player, team: "R") }
       
       it 'returns row 1 (0)' do
         expect(board3.check_row(3)).to be 0
       end
       
       it 'returns row 3(2)' do
-        2.times { board3.place_piece("R", 3) }
-        expect(board3.check_row(3)).to be 2
+        board3.place_piece(player1, 0, 2)
+        board3.place_piece(player1, 1, 2) 
+        expect(board3.check_row(2)).to be 2
       end
 
       before do
@@ -85,19 +96,32 @@ RSpec.describe Gameboard do
       end
 
       it 'returns nil when row is full' do
-        7.times { board3.place_piece("R", 4) }
-        expect(board3.check_row(4)).to be nil
+        board3.board = [
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil]
+        ]
+        expect(board3.check_row(0)).to be nil
       end
 
       it 'returns height of 4 (index of 3)' do
-        3.times { board3.place_piece "R", 4 }
-        expect(board3.check_row(4)).to be 3
+        board3.board = [
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil]]
+        expect(board3.check_row(0)).to be 3
       end
 
       it 'calls add_row when row does not exist' do
-        3.times { board3.place_piece "R", 4 }
+        board3.board = [
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil],
+          ["R", nil, nil, nil, nil, nil, nil]]
         expect(board3).to receive(:add_row)
-        board3.check_row(4)
+        board3.check_row(0)
       end
     end
   end
@@ -247,6 +271,47 @@ RSpec.describe Gameboard do
         expect(board6.down_diagonal_win(3, 3, 'R')).to be true
       end
 
+    end
+  end
+
+  describe '#tie?' do
+    context 'return true when board is full' do
+      subject(:fullboard)  { described_class.new() }
+
+      it 'return true when board is full' do
+        fullboard.board = [
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"]
+        ]
+        expect(fullboard.tie).to be true
+      end
+
+      it 'returns false when array full with only 5 rows' do
+        fullboard.board = [
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"]
+        ]
+        expect(fullboard.tie).to be false
+      end
+      
+      it 'returns false top row is not full' do
+        fullboard.board = [
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", "B"],
+          ["B", "B", "B", "B", "B", "B", nil]
+        ]
+        expect(fullboard.tie).to be false
+      end
     end
   end
 

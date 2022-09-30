@@ -2,41 +2,23 @@ class Gameboard
   attr_accessor :board
   def initialize(rows = 0)
     @board = Array.new(rows) {Array.new(7)}
+    @last_piece = {row: nil, column: nil, player: nil}
   end
 
   def add_row 
     @board << Array.new(7) unless @board.length >= 6
   end
 
-  def place_piece(player, column)
-    begin
-      row = check_row(column)
-      @board[row][column] = player.team
-      print_board
-    rescue
-      puts 'invalid input try again'
-      print_board()
-      place_piece(player, ask_column(player))
-    end
-    if check_win(row, column, player.team)
-      you_win(player)
-    elsif tie?()
-      tiegame()
-    else
-      place_piece(player.opponent, ask_column(player.opponent))
-    end
+  def place_piece(player, row, column)
+    @board[row][column] = player.team
+    print_board
+    @last_piece[:row] = row
+    @last_piece[:column] = column
+    @last_piece[:player] = player
   end
 
-  def tie?
-    if @board.length == 7
-      if @board[6].all? { |element| element != nil}
-        true
-      else
-        false
-      end
-    else
-      false
-    end
+  def tie
+    @board.length == 6 && @board[5].all? { |element| element != nil}
   end
 
   def check_row(column)
@@ -80,9 +62,9 @@ class Gameboard
     end
   end 
 
-  def check_win(row, column, team)
-    if column_win(row, column, team) || row_win(row, column, team)||
-       up_diagonal_win(row, column, team) || down_diagonal_win(row, column, team)
+  def check_win()
+    if column_win(@last_piece[:row], @last_piece[:column], @last_piece[:player].team) || row_win(@last_piece[:row], @last_piece[:column], @last_piece[:player].team)||
+       up_diagonal_win(@last_piece[:row], @last_piece[:column], @last_piece[:player].team) || down_diagonal_win(@last_piece[:row], @last_piece[:column], @last_piece[:player].team)
       return true
     end 
   end
@@ -154,15 +136,38 @@ class Gameboard
   end
 
   def start_game
-    player1 = Player.new("R", self, "Player 1")
-    player2 = Player.new("B", self, "Player 2", player1)
+    #makes players and get row and column and then loops turn till end game
+    player1 = Player.new("R", "Player 1")
+    player2 = Player.new("B", "Player 2", player1)
     player1.opponent = player2
     print_board
-    place_piece(player1, ask_column(player1))
+
+    while 
+      turn(player1)
+      break if check_win || tie
+      turn(player2)
+      break if check_win|| tie
+    end
+
+    if check_win
+      you_win()
+    elsif tie()
+      tiegame()
+    end
   end
 
-  def you_win(player)
-    puts "#{player.name} Wins"
+  def turn(player)
+  #when check row is nil repeat
+    column = ask_column(player)
+    while check_row(column) == nil
+      column = ask_column(player)
+    end
+    row = check_row(column)
+    place_piece(player, row, column)
+  end
+
+  def you_win()
+    puts "#{@last_piece[:player].name} Wins! (team:#{@last_piece[:player].team})"
     replay()
   end
 
@@ -198,41 +203,26 @@ class Gameboard
     end
   end
 
+  def valid_input?(number)
+    if number =~ /\A[1-7]\Z/ && check_row()
+      true
+    else
+      puts "invalid input"
+    end
+  end
 
 end
 
 class Player 
   attr_accessor :opponent, :name, :team
-  def initialize(team, board, name, opponent = nil)
+  def initialize(team, name, opponent = nil)
     @name = name
     @team = team
-    @board = board
     @opponent = opponent
-  end
-
-  def place_piece
-    @board.place_piece(@team, ask_column())
-    @opponent.place_piece
-  end
-
-  def ask_column
-    puts "#{@name} which column would you like to insert your piece? (1 - 7)"
-    begin
-      column = gets.chomp.to_i
-      if column.between?(0, 6)
-        return column
-      else
-        puts "invalid input please try again"
-        ask_column
-      end
-    rescue
-      puts "invalid input please try again"
-      ask_column
-    end
   end
 end
 
-=begin
+
 board = Gameboard.new
 board.start_game
-=end
+
